@@ -1,0 +1,168 @@
+<!-- Payment Box -->
+<div x-data="{ 
+    folderType: 'trial',
+    paymentStatus: 'processing'
+}" x-show="$store.state.current_state === 'AUTH'" x-init="$watch('$store.state.current_state', (newState) => {
+    if (newState === 'DRIVE') {
+        paymentStatus = 'complete';
+    }
+})" class="mt-8 max-w-7xl mx-auto">
+    <div class="text-center mb-8">
+        <h2 class="text-3xl font-extrabold text-gray-900">Choose Your Plan</h2>
+        <p class="mt-4 text-lg text-gray-500">Select the perfect folder plan for your needs</p>
+    </div>
+
+    <!-- Pricing Boxes Grid -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <!-- Trial Tier -->
+        <div
+            class="relative rounded-lg border border-gray-300 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+            <h3 class="text-lg font-semibold text-gray-900">Trial Folder</h3>
+            <p class="mt-2 text-sm text-gray-500">Perfect for trying out TenFold</p>
+            <div class="mt-2">
+                <span class="text-2xl font-bold text-gray-900">Free</span>
+                <span class="text-sm text-gray-500">/7 days</span>
+            </div>
+            <ul class="mt-4 space-y-2 text-sm text-gray-500">
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    1 Active Folder
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    5GB Storage
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Basic AI Features
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Add More Folders Later
+                </li>
+            </ul>
+            <form hx-post="/api/state/payment/checkout" hx-headers='{
+                    "Authorization": "Bearer " + localStorage.getItem("access_token"),
+                    "Content-Type": "application/json"
+                }' hx-trigger="submit" hx-swap="none" class="mt-6">
+                <input type="hidden" name="plan_name" value="trial">
+                <input type="hidden" name="price_id" value="trial_plan">
+                <input type="hidden" name="mode" value="trial">
+                <button type="submit"
+                    class="w-full rounded-md bg-primary px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary/90">
+                    Start Free Trial
+                </button>
+            </form>
+        </div>
+
+        <!-- Standard Tier -->
+        <div
+            class="relative rounded-lg border-2 border-primary bg-white p-6 shadow-md hover:shadow-lg transition-shadow">
+            <div
+                class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white px-3 py-1 rounded-full text-xs font-semibold">
+                Most Popular
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">Standard Folder</h3>
+            <p class="mt-2 text-sm text-gray-500">For serious students</p>
+            <div class="mt-2">
+                <span class="text-2xl font-bold text-gray-900">$3</span>
+                <span class="text-sm text-gray-500">/month</span>
+            </div>
+            <ul class="mt-4 space-y-2 text-sm text-gray-500">
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    1 Active Folder
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    25GB Storage
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Advanced AI Features
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Add More Folders Anytime
+                </li>
+            </ul>
+            <form hx-post="/api/state/payment/checkout" hx-headers='{
+                    "Authorization": "Bearer " + localStorage.getItem("access_token"),
+                    "Content-Type": "application/json"
+                }' hx-trigger="submit" hx-swap="none" class="mt-6">
+                <input type="hidden" name="plan_name" value="standard">
+                <input type="hidden" name="price_id" value="price_standard">
+                <input type="hidden" name="mode" value="subscription">
+                <button type="submit"
+                    class="w-full rounded-md bg-primary px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary/90">
+                    Get Standard Folder
+                </button>
+            </form>
+        </div>
+
+        <!-- Pro Tier -->
+        <div
+            class="relative rounded-lg border border-gray-300 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+            <h3 class="text-lg font-semibold text-gray-900">Pro Folder</h3>
+            <p class="mt-2 text-sm text-gray-500">For power users</p>
+            <div class="mt-2">
+                <span class="text-2xl font-bold text-gray-900">$5</span>
+                <span class="text-sm text-gray-500">/month</span>
+            </div>
+            <ul class="mt-4 space-y-2 text-sm text-gray-500">
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    1 Active Folder
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    100GB Storage
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Premium AI Features
+                </li>
+                <li class="flex items-center">
+                    <svg class="h-4 w-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    24/7 Priority Support
+                </li>
+            </ul>
+            <form hx-post="/api/state/payment/checkout" hx-headers='{
+                    "Authorization": "Bearer " + localStorage.getItem("access_token"),
+                    "Content-Type": "application/json"
+                }' hx-trigger="submit" hx-swap="none" class="mt-6">
+                <input type="hidden" name="plan_name" value="pro">
+                <input type="hidden" name="price_id" value="price_pro">
+                <input type="hidden" name="mode" value="subscription">
+                <button type="submit"
+                    class="w-full rounded-md bg-primary px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary/90">
+                    Get Pro Folder
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,16 @@
+<!-- Visitor Box -->
+<div x-data class="mt-8 max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-8">
+    <div class="text-center">
+        <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Welcome to TenFold</h2>
+
+        <!-- Google Sign-In Button -->
+        <div class="flex justify-center">
+            <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-context="signin"
+                data-callback="handleCredentialResponse" data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"
+                data-text="continue_with" data-shape="rectangular" data-logo_alignment="left">
+            </div>
+        </div>
+    </div>
+</div>

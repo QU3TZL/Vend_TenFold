@@ -1,0 +1,192 @@
+<!-- Post-Payment Success Box -->
+<div x-data="{
+    folderType: 'trial',
+    oauthInProgress: false,
+    folderDetails: {
+        trial: {
+            name: 'Trial Folder',
+            storage: '5GB',
+            price: 'Free 7 Day Trial',
+            features: [
+                'Basic AI Features',
+                '1 Active Folder',
+                '5GB Storage',
+                '7-Day Trial'
+            ]
+        },
+        standard: {
+            name: 'Standard Folder',
+            storage: '25GB',
+            price: '$3/month',
+            features: [
+                'Advanced AI Features',
+                '1 Active Folder',
+                '25GB Storage',
+                'Priority Support'
+            ]
+        },
+        pro: {
+            name: 'Pro Folder',
+            storage: '100GB',
+            price: '$5/month',
+            features: [
+                'Premium AI Features',
+                '1 Active Folder',
+                '100GB Storage',
+                '24/7 Priority Support'
+            ]
+        }
+    },
+    paymentStatus: 'processing',
+    async init() {
+        if ($store.state.current_state !== 'PAYMENT') return;
+        
+        try {
+            console.log('[PaymentSuccess] Initializing payment success box');
+            // Check if we were redirected here from a payment
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session_id');
+            
+            if (sessionId) {
+                console.log('[PaymentSuccess] Payment session ID found:', sessionId);
+                
+                // Handle successful payment redirect
+                const response = await fetch('/api/state', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch state');
+                }
+                
+                const data = await response.json();
+                console.log('[PaymentSuccess] State data after payment:', data);
+                
+                if (data.success) {
+                    // Use subscription tier from state metadata
+                    this.folderType = data.data.state_metadata?.subscription_tier || 'trial';
+                    
+                    // Update store state
+                    const store = Alpine.store('state');
+                    store.current_state = data.data.current_state;
+                    store.state_metadata = data.data.state_metadata;
+                    
+                    console.log('[PaymentSuccess] Updated folder type:', this.folderType);
+                }
+            }
+        } catch (error) {
+            console.error('[PaymentSuccess] Failed to initialize:', {
+                error: error.message,
+                stack: error.stack
+            });
+        }
+        
+        // Watch for state changes
+        this.$watch('$store.state.current_state', (newState) => {
+            if (newState === 'DRIVE') {
+                // Payment complete, drive auth successful
+                this.paymentStatus = 'complete';
+            }
+        });
+    }
+}" x-init="init()" x-show="$store.state.current_state === 'PAYMENT'"
+    class="mt-8 max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Column 1: Success Message -->
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
+            <p class="text-gray-600" x-text="'Your ' + folderDetails[folderType].name + ' is ready to be set up.'"></p>
+        </div>
+
+        <!-- Column 2: Plan Details -->
+        <div class="border-t md:border-t-0 md:border-l border-gray-200 pt-6 md:pt-0 md:pl-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Plan Details</h3>
+            <ul class="space-y-3">
+                <template x-for="feature in folderDetails[folderType].features" :key="feature">
+                    <li class="flex items-center text-gray-600">
+                        <svg class="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
+                            </path>
+                        </svg>
+                        <span x-text="feature"></span>
+                    </li>
+                </template>
+            </ul>
+        </div>
+
+        <!-- Column 3: Next Steps -->
+        <div class="border-t md:border-t-0 md:border-l border-gray-200 pt-6 md:pt-0 md:pl-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Next Steps</h3>
+            <p class="text-gray-600 mb-6">Connect your Google Drive to start using your folder</p>
+
+            <!-- Single Drive Connect Button -->
+            <div>
+                <!-- Error Message -->
+                <div x-show="$store.state.error" class="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
+                    <p x-text="$store.state.error"></p>
+                </div>
+
+                <button @click="
+                    if (!$store.state.loading) {
+                        console.log('[DriveAuth] Starting OAuth flow');
+                        $store.state.loading = true;
+                        $store.state.error = null;
+                        
+                        // Set OAuth in progress flag
+                        const store = Alpine.store('state');
+                        store.state_metadata = {
+                            ...store.state_metadata,
+                            oauth_in_progress: true
+                        };
+                        
+                        fetch('/api/state/drive/oauth/url', {
+                            method: 'GET',
+                            credentials: 'include',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                            }
+                        })
+                        .then(async response => {
+                            const data = await response.json();
+                            console.log('[DriveAuth] Response:', {
+                                status: response.status,
+                                data: data
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error(data.detail || 'Failed to get OAuth URL');
+                            }
+                            
+                            if (data.success && data.url) {
+                                console.log('[DriveAuth] Redirecting to:', data.url);
+                                // Store the current state before redirect
+                                localStorage.setItem('pre_oauth_state', JSON.stringify($store.state.state_metadata));
+                                window.location.href = data.url;
+                            } else {
+                                throw new Error('Invalid response format');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('[DriveAuth] Error:', error);
+                            $store.state.error = error.message;
+                            $store.state.loading = false;
+                            // Reset OAuth flag on error
+                            store.state_metadata = {
+                                ...store.state_metadata,
+                                oauth_in_progress: false
+                            };
+                        });
+                    }" :disabled="$store.state.loading"
+                    class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    <span x-text="$store.state.loading ? 'Connecting...' : 'Connect Google Drive'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,118 @@
+<!-- Active Success Box -->
+<div x-data="{
+    folders: [],
+    isProcessingPayment: false,
+    async init() {
+        if ($store.state.current_state !== 'ACTIVE') return;
+        
+        console.log('[ActiveSuccess] Component initialization started');
+        try {
+            await this.fetchFolders();
+        } catch (error) {
+            console.error('[ActiveSuccess] Initialization failed:', error);
+        }
+    },
+    async createNewFolder() {
+        if (this.isProcessingPayment) return;
+        
+        console.log('[ActiveSuccess] Starting new folder creation process');
+        this.isProcessingPayment = true;
+        
+        try {
+            const response = await fetch('/api/payment/create-folder-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to create payment session');
+            }
+            
+            const { sessionUrl } = await response.json();
+            window.location.href = sessionUrl;
+        } catch (error) {
+            console.error('[ActiveSuccess] Payment session creation failed:', error);
+            alert('Failed to start payment process. Please try again.');
+        } finally {
+            this.isProcessingPayment = false;
+        }
+    },
+    async fetchFolders() {
+        console.log('[ActiveSuccess] Fetching folders...');
+        try {
+            const response = await fetch('/api/state/drive/folders', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch folders');
+            }
+
+            const data = await response.json();
+            this.folders = data.folders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        } catch (error) {
+            console.error('[ActiveSuccess] Failed to fetch folders:', error);
+        }
+    }
+}" x-init="init()" x-show="$store.state.current_state === 'ACTIVE'"
+    @state-change.window="if ($store.state.current_state === 'ACTIVE') fetchFolders()"
+    class="mt-8 max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-8">
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Column 1: Status and Actions -->
+        <div class="text-center">
+            <!-- Success Icon -->
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Your TenFold Workspace is Ready!</h2>
+            <p class="text-gray-600 mb-6">Your folders are deployed and ready to use. You can create additional folders
+                at any time.</p>
+
+            <!-- New Folder Button -->
+            <div class="mt-6">
+                <button @click="createNewFolder()" :disabled="isProcessingPayment"
+                    :class="{'opacity-50 cursor-not-allowed': isProcessingPayment}"
+                    class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <span x-text="isProcessingPayment ? 'Processing...' : 'Add New Folder'"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Column 2: Folder List -->
+        <div class="border-t md:border-t-0 md:border-l border-gray-200 pt-6 md:pt-0 md:pl-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Your Folders</h3>
+            <div class="space-y-4">
+                <template x-if="folders.length === 0">
+                    <p class="text-gray-500 text-center">No folders created yet</p>
+                </template>
+                <template x-for="(folder, index) in folders" :key="index">
+                    <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        <a :href="folder.drive_url" target="_blank"
+                            class="text-primary hover:text-primary-dark flex-grow truncate" x-text="folder.name"></a>
+                        <span class="text-xs text-gray-500"
+                            x-text="new Date(folder.created_at).toLocaleDateString()"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,138 @@
+<!-- Drive Success Box -->
+<div x-data="{
+    deploymentStatus: 'deploying', // deploying, complete, error
+    deploymentProgress: 0,
+    async init() {
+        if ($store.state.current_state !== 'DRIVE') return;
+        
+        console.log('[DriveSuccess] Component initialization started');
+        try {
+            // Start listening for deployment events
+            this.startEventSource();
+            
+            // Show initial progress
+            this.deploymentProgress = 10;
+            console.log('[DriveSuccess] Initialization complete');
+        } catch (error) {
+            console.error('[DriveSuccess] Initialization failed:', error);
+            this.deploymentStatus = 'error';
+        }
+    },
+    startEventSource() {
+        console.log('[DriveSuccess] Starting event source');
+        const eventSource = new EventSource('/api/state/drive/events');
+        
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log('[DriveSuccess] Event received:', data);
+            
+            if (data.type === 'folder_deployment') {
+                switch(data.status) {
+                    case 'started':
+                        this.deploymentProgress = 25;
+                        break;
+                    case 'folder_created':
+                        this.deploymentProgress = 50;
+                        break;
+                    case 'readme_uploaded':
+                        this.deploymentProgress = 75;
+                        break;
+                    case 'completed':
+                        this.deploymentProgress = 100;
+                        this.deploymentStatus = 'complete';
+                        eventSource.close();
+                        break;
+                    case 'error':
+                        this.deploymentStatus = 'error';
+                        eventSource.close();
+                        break;
+                }
+            }
+        };
+        
+        eventSource.onerror = (error) => {
+            console.error('[DriveSuccess] EventSource error:', error);
+            this.deploymentStatus = 'error';
+            eventSource.close();
+        };
+
+        // Watch for state changes
+        this.$watch('$store.state.current_state', (newState) => {
+            console.log('[DriveSuccess] State changed to:', newState);
+            
+            if (newState === 'ACTIVE') {
+                console.log('[DriveSuccess] Deployment complete, transitioning to ACTIVE');
+                this.deploymentProgress = 100;
+                this.deploymentStatus = 'complete';
+                eventSource.close();
+            } else if (newState === 'ERROR') {
+                console.log('[DriveSuccess] Deployment failed');
+                this.deploymentStatus = 'error';
+                eventSource.close();
+            }
+        });
+    }
+}" x-init="init()" x-show="$store.state.current_state === 'DRIVE'"
+    @state-change.window="console.log('[DriveSuccess] State change event:', $event.detail)"
+    class="mt-8 max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-8">
+
+    <div class="text-center">
+        <!-- Success Icon (shown when complete) -->
+        <template x-if="deploymentStatus === 'complete'">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+        </template>
+
+        <!-- Loading Spinner (shown during deployment) -->
+        <template x-if="deploymentStatus === 'deploying'">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 mb-4">
+                <svg class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                    </circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </div>
+        </template>
+
+        <!-- Error Icon -->
+        <template x-if="deploymentStatus === 'error'">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </div>
+        </template>
+
+        <!-- Status Messages -->
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">
+            <span x-show="deploymentStatus === 'deploying'">Setting Up Your TenFold Workspace...</span>
+            <span x-show="deploymentStatus === 'complete'">Drive Connected Successfully!</span>
+            <span x-show="deploymentStatus === 'error'">Setup Failed</span>
+        </h2>
+
+        <!-- Progress Bar (shown during deployment) -->
+        <template x-if="deploymentStatus === 'deploying'">
+            <div class="w-full max-w-xs mx-auto mt-4">
+                <div class="bg-gray-200 rounded-full h-2.5">
+                    <div class="bg-primary h-2.5 rounded-full transition-all duration-500"
+                        :style="'width: ' + deploymentProgress + '%'"></div>
+                </div>
+                <p class="text-sm text-gray-600 mt-2" x-text="'Progress: ' + deploymentProgress + '%'"></p>
+            </div>
+        </template>
+
+        <p class="text-gray-600" x-show="deploymentStatus === 'complete'">
+            Your Google Drive is connected. We're setting up your workspace now...
+        </p>
+        <p class="text-red-600" x-show="deploymentStatus === 'error'">
+            There was an error setting up your workspace. Please try again or contact support.
+        </p>
+    </div>
+</div>

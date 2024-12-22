@@ -1,0 +1,82 @@
+/* Alpine.js Transitions */
+
+/* Fade */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Slide */
+.slide-enter-active,
+.slide-leave-active {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-enter-from {
+    transform: translateX(20px);
+    opacity: 0;
+}
+
+.slide-leave-to {
+    transform: translateX(-20px);
+    opacity: 0;
+}
+
+/* Scale */
+.scale-enter-active,
+.scale-leave-active {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.scale-enter-from,
+.scale-leave-to {
+    transform: scale(0.95);
+    opacity: 0;
+}
+
+/* State Transitions */
+.x-transition-enter {
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.x-transition-enter-start {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+.x-transition-enter-end {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.x-transition-leave {
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.x-transition-leave-start {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.x-transition-leave-end {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+/* Page Flip */
+.perspective-1000 {
+    perspective: 1000px;
+}
+
+.rotate-y-180 {
+    transform: rotateY(180deg);
+}
+
+.rotate-y-0 {
+    transform: rotateY(0deg);
+}

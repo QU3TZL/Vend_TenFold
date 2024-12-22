@@ -1,0 +1,19 @@
+<!-- State Manager Component -->
+<div x-data="{ 
+    get state() { return $store.state.current_state },
+    get metadata() { return $store.state.state_metadata },
+    get loading() { return $store.state.loading },
+    get error() { return $store.state.error }
+}" x-init="$store.state.refreshState()">
+    <!-- State debug info (only show in development) -->
+    <div x-show="window.location.hostname === 'localhost'" class="text-sm text-gray-500 mt-4">
+        <div x-show="loading">Loading state...</div>
+        <div x-show="error" x-text="error" class="text-red-500"></div>
+        <div x-show="state">
+            <div>Current State: <span x-text="state" class="font-bold"></span></div>
+            <div>Metadata:
+                <pre x-text="JSON.stringify(metadata, null, 2)" class="bg-gray-100 p-2 rounded"></pre>
+            </div>
+        </div>
+    </div>
+</div>

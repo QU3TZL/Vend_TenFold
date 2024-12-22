@@ -1,0 +1,80 @@
+<!-- Visitor Status Component -->
+<div x-data="{ state: $store.state }" x-init="$store.state.init()">
+    <!-- Loading State -->
+    <div x-show="state.loading" class="animate-pulse">
+        <div class="h-4 bg-gray-200 rounded w-24"></div>
+    </div>
+
+    <!-- Error State -->
+    <div x-show="state.error" class="text-red-500 text-sm" x-text="state.error"></div>
+
+    <!-- Content -->
+    <div x-show="!state.loading && !state.error">
+        <!-- Debug output -->
+        <template x-if="!window.ENV?.GOOGLE_CLIENT_ID">
+            <div class="text-red-500 text-sm mb-4">
+                Warning: Google Client ID not configured. Please set GOOGLE_CLIENT_ID in your environment.
+            </div>
+        </template>
+
+        <!-- Google Sign-In Button -->
+        <template x-if="window.ENV?.GOOGLE_CLIENT_ID">
+            <div class="flex justify-center">
+                <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-context="signin" data-ux_mode="popup"
+                    data-callback="onSignIn" data-auto_prompt="false" data-itp_support="true">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
+                    data-text="signin_with" data-size="large" data-logo_alignment="left">
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+
+<!-- Google Sign-In Script -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+    // Initialize Google Sign-In
+    console.log('Setting up Google Sign-In...');
+
+    function onSignIn(googleUser) {
+        console.log('Sign-in callback triggered', googleUser);
+
+        const credential = googleUser.credential;
+        if (!credential) {
+            console.error('No credential received');
+            return;
+        }
+
+        // Send the token to your backend
+        fetch('/api/state/auth/google/signin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token: credential })
+        })
+            .then(response => {
+                console.log('Backend response:', response);
+                if (!response.ok) {
+                    return response.json().then(err => Promise.reject(err));
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Sign-in successful:', data);
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Sign-in failed:', error);
+            });
+    }
+
+    // Debug logging
+    window.onload = function () {
+        console.log('Page loaded with client ID:', '{{ google_client_id }}');
+        const button = document.querySelector('.g_id_signin');
+        console.log('Sign-in button present:', !!button);
+    }
+</script>

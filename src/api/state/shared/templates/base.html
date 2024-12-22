@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<!--
+ROUTING AND TEMPLATE ARCHITECTURE
+===============================
+
+Key Components:
+--------------
+1. Route Configuration
+   - All route prefixes are defined ONLY in run.py
+   - Individual route files (auth_routes.py, visitor_routes.py, etc.) should NOT include prefixes
+   - Full route structure:
+     * /api/state/visitor/* -> visitor_routes.py
+     * /api/state/auth/* -> auth_routes.py
+     * /api/state/payment/* -> payment_routes.py
+     * /api/state/drive/* -> drive_routes.py
+     * /api/state/active/* -> active_routes.py
+
+2. Template Directory Structure
+   - Base templates: src/api/state/shared/templates/
+   - State-specific templates:
+     * src/api/state/visitor/templates/
+     * src/api/state/auth/templates/
+     * src/api/state/payment/templates/
+     * src/api/state/drive/templates/
+     * src/api/state/active/templates/
+
+3. Template Inheritance
+   - All templates extend base.html
+   - State-specific components are included based on current_state
+   - Template search order:
+     1. State-specific directory
+     2. Shared templates directory
+
+4. Static Files
+   - Served from: src/static/
+   - URL prefix: /static/
+   - Key directories:
+     * /static/css/ - Stylesheets
+     * /static/js/ - JavaScript files
+     * /static/img/ - Images
+
+Common Issues:
+-------------
+1. Route Conflicts
+   - Never add prefixes in individual route files
+   - All prefixes should be defined in run.py only
+   - Check run.py for the definitive routing configuration
+
+2. Template Not Found
+   - Verify template exists in correct directory
+   - Check template directory is included in run.py
+   - Ensure template name matches exactly (case-sensitive)
+
+3. Static Files 404
+   - Verify file exists in src/static directory
+   - Check static mount in run.py is correct
+   - URL should be /static/[css|js|img]/filename
+-->
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TenFold{% endblock %}</title>
+
+    <!-- Pass environment variables to frontend -->
+    <script>
+        window.ENV = {
+            GOOGLE_CLIENT_ID: "{{ google_client_id }}"
+        };
+    </script>
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#7C3AED',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.9"></script>
+
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- State Management -->
+    <script>
+        // Initial state from server
+        const defaultMetadata = {
+            allowed_transitions: ["AUTH"]
+        };
+        window.INITIAL_STATE = {
+            current_state: "{{ current_state }}",
+            state_metadata: {% if state_metadata %}{ { state_metadata | tojson | safe } } {% else %}defaultMetadata{% endif %},
+        loading: false,
+            error: null
+        };
+        console.log('Initial state from server:', window.INITIAL_STATE);
+    </script>
+    <script src="/static/js/store.js"></script>
+
+    <!-- Custom CSS -->
+    <style type="text/tailwindcss">
+        [x-cloak] { display: none !important; }
+        .x-cloak-until-init { display: none; }
+        [x-init] .x-cloak-until-init { display: block; }
+        @layer components {
+            .btn-primary {
+                @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors;
+            }
+            .btn-secondary {
+                @apply px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors;
+            }
+            .input-field {
+                @apply px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary;
+            }
+        }
+    </style>
+
+    <!-- Replace the old Google Sign-In script with the new Identity Services library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Update the Google Sign-In configuration -->
+    <script>
+        function handleCredentialResponse(response) {
+            console.log("Google Sign-In callback received", {
+                hasCredential: !!response.credential,
+                responseData: response
+            });
+
+            if (response.credential) {
+                const requestData = {
+                    token: response.credential
+                };
+
+                console.log("Sending auth request with data:", JSON.stringify(requestData, null, 2));
+
+                fetch('/api/state/auth/google/signin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                })
+                    .then(async response => {
+                        const text = await response.text();
+                        console.log('Raw response text:', text);
+
+                        const data = text ? JSON.parse(text) : {};
+                        console.log('Raw response:', {
+                            status: response.status,
+                            ok: response.ok,
+                            data: data
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}, details: ${text}`);
+                        }
+                        return data;
+                    })
+                    .then(async data => {
+                        console.log('Auth successful:', data);
+
+                        if (data.success) {
+                            console.log('Pre-sync state:', Alpine.store('state').current_state);
+
+                            // Update the store with the new state
+                            Alpine.store('state').current_state = 'AUTH';
+                            Alpine.store('state').state_metadata = data.metadata || {};
+                            Alpine.store('state').loading = false;
+
+                            console.log('Post-sync state:', Alpine.store('state').current_state);
+
+                            // Dispatch state change event
+                            window.dispatchEvent(new CustomEvent('state-transition', {
+                                detail: {
+                                    from: 'VISITOR',
+                                    to: 'AUTH',
+                                    timestamp: new Date().toISOString()
+                                }
+                            }));
+                        } else {
+                            throw new Error(data.message || 'Authentication failed');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Sign-in error:', {
+                            message: error.message,
+                            stack: error.stack,
+                            type: error.constructor.name
+                        });
+                        Alpine.store('state').error = 'Sign-in failed. Please try again.';
+                    });
+            }
+        }
+    </script>
+
+    {% if env == 'development' %}
+    <!-- Debug Tools (development only) -->
+    <script src="/static/js/debug.js"></script>
+    {% endif %}
+
+    <link rel="stylesheet" href="/static/css/transitions.css">
+</head>
+
+<body class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-primary">TenFold</a>
+                </div>
+                <!-- Auth Status -->
+                <div class="flex items-center">
+                    {% include "auth_status.html" %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <p class="text-center text-gray-500">© 2023 TenFold. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50" x-data="{ notifications: [] }"
+        @notification.window="notifications.push($event.detail); setTimeout(() => notifications.shift(), 3000)">
+        <template x-for="notification in notifications" :key="notification.id">
+            <div class="mb-2 p-4 rounded-lg shadow-lg text-white"
+                :class="notification.type === 'error' ? 'bg-red-500' : 'bg-green-500'" x-text="notification.message">
+            </div>
+        </template>
+    </div>
+
+    {% if env == 'development' %}
+    <!-- Debug Module (development only) -->
+    <div id="debug-module" x-data class="w-full bg-gray-800 text-white font-mono text-sm border-t border-gray-700 py-2">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-start space-x-8">
+                <div class="flex-1">
+                    <div class="text-gray-400 mb-1">Current State:</div>
+                    <div class="text-green-400 font-bold" x-text="$store.state.current_state"></div>
+                </div>
+                <div class="flex-1">
+                    <div class="text-gray-400 mb-1">State Metadata:</div>
+                    <pre class="text-blue-300 whitespace-pre-wrap"
+                        x-text="JSON.stringify($store.state.state_metadata, null, 2)"></pre>
+                </div>
+                <div class="flex-1">
+                    <div class="text-gray-400 mb-1">Debug Commands:</div>
+                    <div class="text-yellow-300">
+                        <div>__TENFOLD_DEBUG__.api.getCurrentState()</div>
+                        <div>__TENFOLD_DEBUG__.api.getStateHistory()</div>
+                        <div>__TENFOLD_DEBUG__.api.verifyUI()</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Debug output -->
+    <div x-data x-init="
+        console.log('Initial state:', $store.state);
+        $watch('$store.state', value => console.log('Store state updated:', value), { deep: true });
+    "></div>
+</body>
+
+</html>

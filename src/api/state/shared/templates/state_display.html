@@ -1,0 +1,26 @@
+<div x-data>
+    <!-- State display -->
+    <div x-show="$store.state.loading" class="loading-spinner"></div>
+
+    <div x-show="$store.state.error" class="error-message" x-text="$store.state.error"></div>
+
+    <!-- Current state -->
+    <div class="state-info">
+        <span x-text="$store.state.current_state"></span>
+        <span x-text="$store.state.drive_auth_status"></span>
+        <span x-text="$store.state.subscription_tier"></span>
+    </div>
+
+    <!-- State-specific UI -->
+    <template x-if="$store.state.current_state === 'AUTH'">
+        <div class="auth-content">
+            <!-- Auth state UI -->
+        </div>
+    </template>
+
+    <template x-if="$store.state.current_state === 'PAYMENT'">
+        <div class="payment-content">
+            <!-- Payment state UI -->
+        </div>
+    </template>
+</div>
